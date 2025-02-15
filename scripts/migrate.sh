@@ -1,14 +1,15 @@
 #!/bin/bash
 set -e
 
-echo "Running migrations..."
+echo "Applying database migrations..."
 export PGPASSWORD="${DB_PASS}"
 
-psql -h localhost -U "${DB_USER}" -d "${DB_NAME}" -c "
-    CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(100) NOT NULL
-    );
-"
+# Example: Create a new table
+psql -h "${DB_HOST}" -U "${DB_USER}" -d "${DB_NAME}" <<EOF
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
+);
+EOF
 
-echo "Migration completed successfully!"
+echo "Migrations applied successfully!"
