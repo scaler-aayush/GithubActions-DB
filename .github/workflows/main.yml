@@ -41,6 +41,14 @@ jobs:
           export PGPASSWORD=$DB_PASS
           psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c "SELECT NOW();"
 
+      - name: Insert Test Data
+        run: bash scripts/ingest.sh
+
+      - name: Fetch Data to Verify
+        run: |
+          export PGPASSWORD=$DB_PASS
+          psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c "SELECT * FROM users;"    
+
       - name: Run Database Backup
         run: bash scripts/backup.sh
 
@@ -55,12 +63,6 @@ jobs:
 
       - name: Run Database Migration
         run: bash scripts/migrate.sh
-
-      - name: Run Tests (Example)
-        run: echo "Run your application tests here"
-
-      - name: Deploy Application (Example)
-        run: echo "Deploy your application here"
 
       - name: Rollback on Failure
         if: failure()
