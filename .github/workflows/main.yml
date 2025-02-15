@@ -1,0 +1,57 @@
+name: CI/CD with PostgreSQL
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  ci-cd:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_DB: testdb
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Install PostgreSQL Client
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Run Database Backup
+        env:
+          DB_HOST: localhost
+          DB_USER: postgres
+          DB_PASS: postgres
+          DB_NAME: testdb
+        run: bash scripts/backup.sh
+
+      - name: Run Database Migration
+        env:
+          DB_HOST: localhost
+          DB_USER: postgres
+          DB_PASS: postgres
+          DB_NAME: testdb
+        run: bash scripts/migrate.sh || (echo "Migration failed! Rolling back..." && bash scripts/rollback.sh)
+
+      - name: Verify Database
+        env:
+          DB_HOST: localhost
+          DB_USER: postgres
+          DB_PASS: postgres
+          DB_NAME: testdb
+        run: |
+          export PGPASSWORD="${DB_PASS}"
+          psql -h localhost -U "${DB_USER}" -d "${DB_NAME}" -c "SELECT * FROM users;"
