@@ -66,4 +66,4 @@ jobs:
 
       - name: Rollback on Failure
         if: failure()
-        run: bash scripts/rollback.sh
+        run: bash scripts/rollback.sh 
