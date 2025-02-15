@@ -6,52 +6,62 @@ on:
       - main
 
 jobs:
-  ci-cd:
+  build:
     runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:13
         env:
-          POSTGRES_DB: testdb
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: mydb
+          POSTGRES_USER: myuser
+          POSTGRES_PASSWORD: mypassword
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres"
+          --health-cmd "pg_isready -U myuser -d mydb"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
+    env:
+      DB_NAME: mydb
+      DB_USER: myuser
+      DB_PASS: mypassword
+      DB_HOST: localhost
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: Install PostgreSQL Client
-        run: sudo apt-get install -y postgresql-client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Verify Database Connection
+        run: |
+          export PGPASSWORD=$DB_PASS
+          psql -h $DB_HOST -U $DB_USER -d $DB_NAME -c "SELECT NOW();"
 
       - name: Run Database Backup
-        env:
-          DB_HOST: localhost
-          DB_USER: postgres
-          DB_PASS: postgres
-          DB_NAME: testdb
         run: bash scripts/backup.sh
 
-      - name: Run Database Migration
-        env:
-          DB_HOST: localhost
-          DB_USER: postgres
-          DB_PASS: postgres
-          DB_NAME: testdb
-        run: bash scripts/migrate.sh || (echo "Migration failed! Rolling back..." && bash scripts/rollback.sh)
+      - name: Verify Backup File
+        run: ls -lah backup.sql || echo "backup.sql not found!"
 
-      - name: Verify Database
-        env:
-          DB_HOST: localhost
-          DB_USER: postgres
-          DB_PASS: postgres
-          DB_NAME: testdb
-        run: |
-          export PGPASSWORD="${DB_PASS}"
-          psql -h localhost -U "${DB_USER}" -d "${DB_NAME}" -c "SELECT * FROM users;"
+      - name: Upload Database Backup
+        uses: actions/upload-artifact@v3
+        with:
+          name: db-backup
+          path: backup.sql
+
+      - name: Run Database Migration
+        run: bash scripts/migrate.sh
+
+      - name: Run Tests (Example)
+        run: echo "Run your application tests here"
+
+      - name: Deploy Application (Example)
+        run: echo "Deploy your application here"
+
+      - name: Rollback on Failure
+        if: failure()
+        run: bash scripts/rollback.sh
