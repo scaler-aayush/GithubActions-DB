@@ -15,3 +15,5 @@ else
     echo "Backup failed: File not found!"
     exit 1
 fi
+
+# Testing the workflow
